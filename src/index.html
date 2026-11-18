@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SIIFactor · Mantenedor de Calificaciones Tributarias</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#f4f6f7;--card:#fff;--ink:#16222b;--mute:#5b6b76;--line:#d5dde2;--acc:#0f6e6a;--acc-ink:#fff;--bad:#b4402a;--ok:#1d7a46;--hl:#e3f1f0;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10181d;--card:#18232a;--ink:#e6edf0;--mute:#93a4ae;--line:#2b3a43;--acc:#4fc3bb;--acc-ink:#07211f;--bad:#f0866e;--ok:#5fcf8f;--hl:#1b3a39;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10181d;--card:#18232a;--ink:#e6edf0;--mute:#93a4ae;--line:#2b3a43;--acc:#4fc3bb;--acc-ink:#07211f;--bad:#f0866e;--ok:#5fcf8f;--hl:#1b3a39;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;font-weight:600}
+h1 small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:18px 20px 40px}
+nav{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;font:inherit;color:var(--mute);cursor:pointer}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--acc);font-weight:600}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:14px}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mute);gap:3px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:6px 8px;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button.b{font:inherit;padding:7px 14px;border-radius:5px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:500}
+button.d{color:var(--bad);border-color:var(--bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:14px}
+th{color:var(--mute);font-weight:500;font-size:13px}
+tbody tr{cursor:pointer}
+tbody tr.sel{background:var(--hl)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid var(--line)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);width:min(860px,94vw);max-height:90vh;padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.grid.f{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.grid.f input{width:100%}
+h3{margin:16px 0 8px;font-size:14px}
+.msg{min-height:22px;margin:10px 0 0;font-size:14px}
+.note{color:var(--mute);font-size:13px;margin:6px 0 0}
+textarea{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:12px}
+@media (prefers-reduced-motion:no-preference){dialog[open]{animation:in .15s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Calificaciones Tributarias<small>SIIFactor · prototipo para nuam</small></h1>
+  <label>Rol<select id="role"><option value="Administrador">Administrador</option><option value="Analista">Analista</option><option value="Supervisor">Supervisor</option></select></label>
+  <label>Corredora
+    <select id="user"><option value="Corredora A">Corredora A</option><option value="Corredora B">Corredora B</option></select>
+  </label>
+</header>
+<main>
+  <nav role="tablist">
+    <button role="tab" id="t1" aria-selected="true">Mantenedor</button>
+    <button role="tab" id="t2" aria-selected="false">Log de auditoría</button>
+  </nav>
+
+  <section id="v1" class="panel">
+    <div class="filters">
+      <label>Mercado<select id="fMer"><option value="">Todos</option><option>Chile</option><option>Colombia</option><option>Perú</option></select></label>
+      <label>Origen<select id="fOri"><option value="">Todos</option><option>bolsa</option><option>manual</option><option>archivo</option></select></label>
+      <label>Ejercicio<input id="fEj" type="number" placeholder="2025" style="width:100px"></label>
+      <button class="b p" id="bBus">Buscar</button>
+      <button class="b" id="bLim">Limpiar</button>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>Ejercicio</th><th>Mercado</th><th>Instrumento</th><th>Fecha de pago</th><th>Descripción</th><th>Secuencia</th><th>ISFUT</th><th>Origen</th><th>Suma F8–16</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <p class="note" id="count"></p>
+    <div class="bar" id="pager" style="margin-top:8px"></div>
+    <div class="bar">
+      <button class="b p" id="bIng">Ingresar</button>
+      <button class="b" id="bMod" disabled>Modificar</button>
+      <button class="b d" id="bEli" disabled>Eliminar</button>
+      <button class="b" id="bCar">Carga masiva</button>
+    </div>
+    <p class="note">Cada corredora ve las calificaciones de la bolsa y las propias; las de otra corredora no aparecen.</p>
+    <p class="note" id="roleNote"></p>
+  </section>
+
+  <section id="v2" class="panel" hidden>
+    <div class="filters">
+      <label>Instrumento<input id="lIns" placeholder="CFIBPRIV-E"></label>
+      <label>Usuario<input id="lUsu" placeholder="Corredora A"></label>
+      <label>Desde<input id="lDes" type="date"></label>
+      <label>Hasta<input id="lHas" type="date"></label>
+      <button class="b p" id="lBus">Buscar</button>
+      <button class="b" id="lLim">Limpiar</button>
+    </div>
+    <p class="note" id="logCount"></p>
+    <div class="scroll"><table>
+      <thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Operación</th><th>Instrumento</th><th>Valor anterior</th><th>Valor nuevo</th></tr></thead>
+      <tbody id="logRows"></tbody>
+    </table></div>
+    <p class="note">El log es de solo lectura: no hay acciones para editar o borrar registros. Se muestran los 200 registros más recientes.</p>
+  </section>
+</main>
+
+<dialog id="dEd">
+  <h2 id="edT" style="margin:0 0 10px;font-size:17px">Ingresar calificación</h2>
+  <div class="grid">
+    <label>Mercado<select id="eMer"><option>Chile</option><option>Colombia</option><option>Perú</option></select></label>
+    <label>Ejercicio<input id="eEj" type="number"></label>
+    <label>Instrumento<input id="eIns"></label>
+    <label>Secuencia de evento<input id="eSeq" type="number" placeholder="mayor a 10000"></label>
+    <label>Fecha de pago<input id="eFec" type="date"></label>
+    <label>Dividendo (monto total)<input id="eDiv" type="number" value="0"></label>
+    <label>Descripción<input id="eDes"></label>
+    <label style="flex-direction:row;align-items:center;gap:8px;margin-top:20px"><input id="eIsf" type="checkbox"> Acogido a ISFUT</label>
+  </div>
+  <h3>Montos del certificado (por columna 8 a 37)</h3>
+  <div class="grid f" id="gM"></div>
+  <div class="bar"><button class="b" id="bCal">Calcular</button></div>
+  <h3>Factores (editables)</h3>
+  <div class="grid f" id="gF"></div>
+  <p class="msg" id="eMsg" role="status"></p>
+  <div class="bar"><button class="b p" id="bGra">Grabar</button><button class="b" id="bCan">Cancelar</button></div>
+</dialog>
+
+<dialog id="dCar">
+  <h2 style="margin:0 0 6px;font-size:17px">Carga masiva de factores</h2>
+  <p class="note" style="margin:0 0 10px">Formato esperado: CSV con punto y coma, 36 columnas: ejercicio; mercado; instrumento; fecha; descripción; secuencia; factores 8 a 37. Si la llave (mercado + ejercicio + instrumento + secuencia) ya existe, se actualiza.</p>
+  <input type="file" id="cFile" accept=".csv,.txt">
+  <button class="b" id="bEj" style="margin-left:6px">Usar archivo de ejemplo</button>
+  <textarea id="cTxt" spellcheck="false" style="margin-top:10px"></textarea>
+  <div class="bar" style="margin-top:8px"><button class="b" id="bPre">Previsualizar</button></div>
+  <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Fila</th><th>Instrumento</th><th>Secuencia</th><th>Suma F8–16</th><th>Resultado</th></tr></thead><tbody id="cRows"></tbody></table></div>
+  <p class="msg" id="cMsg" role="status"></p>
+  <div class="bar"><button class="b p" id="bOk" disabled>Confirmar carga</button><button class="b" id="bCc">Cerrar</button></div>
+</dialog>
+
+<script>
+(function(){
+var KEY="siifactor_proto_v1",N=30;
+var $=function(i){return document.getElementById(i)};
+var zeros=function(){return Array(N).fill(0)};
+function seed(){
+  function f(a){var r=zeros();a.forEach(function(v,i){r[i]=v});return r}
+  return {rows:[
+    {id:1,mer:"Chile",ej:2025,ins:"CFIBPRIV-E",fec:"2025-04-28",des:"Dividendo definitivo",seq:10451,isf:false,ori:"bolsa",cor:null,div:1000000,f:f([.6,.25,.1,.05])},
+    {id:2,mer:"Chile",ej:2025,ins:"SQM-B",fec:"2025-05-12",des:"Dividendo provisorio",seq:10452,isf:true,ori:"bolsa",cor:null,div:800000,f:f([.5,.3,.2])},
+    {id:3,mer:"Perú",ej:2024,ins:"BVN",fec:"2024-11-20",des:"Retiro",seq:10310,isf:false,ori:"manual",cor:"Corredora A",div:500000,f:f([.7,.3])},
+    {id:4,mer:"Colombia",ej:2025,ins:"ECOPETROL",fec:"2025-06-03",des:"Dividendo ordinario",seq:10600,isf:false,ori:"archivo",cor:"Corredora B",div:2000000,f:f([.4,.4,.2])}
+  ],log:[],next:5}}
+var S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+if(!S||!S.rows)S=seed();
+S.rows.forEach(function(r){r.f=pad(r.f);if(r.m)r.m=pad(r.m)});
+var saveOk=true;
+function pad(a){a=a||[];while(a.length<N)a.push(0);return a}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S,function(k,v){if((k==="f"||k==="m")&&Array.isArray(v)){var n=v.length;while(n>0&&!v[n-1])n--;return v.slice(0,n)}return v}));saveOk=true}catch(e){saveOk=false}}
+function user(){return $("user").value}
+function role(){return $("role").value}
+var MERC=["Chile","Colombia","Perú"];
+function okFecha(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;var p=s.split("-").map(Number),d=new Date(Date.UTC(p[0],p[1]-1,p[2]));return d.getUTCFullYear()===p[0]&&d.getUTCMonth()===p[1]-1&&d.getUTCDate()===p[2]}
+var PERM={Analista:{edit:1,del:1,load:0,log:0},Administrador:{edit:1,del:1,load:1,log:1},Supervisor:{edit:0,del:0,load:0,log:1}};
+var ROLENOTE={Analista:"Rol Analista: puede ingresar, modificar y eliminar. No puede cargar archivos ni consultar el log.",Administrador:"Rol Administrador: puede ingresar, modificar, eliminar, cargar archivos y consultar el log.",Supervisor:"Rol Supervisor: solo consulta calificaciones y el log."};
+function can(a){return !!PERM[role()][a]}
+function sum(f){return f.slice(0,9).reduce(function(a,b){return a+(+b||0)},0)}
+function r8(x){return Math.round(x*1e8)/1e8}
+function now(){return new Date().toLocaleString("es-CL")}
+function addLog(op,ins,a,n){S.log.unshift({t:now(),u:user()+" · "+role(),d:new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString(),op:op,ins:ins,a:a,n:n});save()}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+var sel=null,PAGE=25,page=0;
+function logFiltered(){
+  var i=$("lIns").value.trim().toLowerCase(),u=$("lUsu").value.trim().toLowerCase(),d1=$("lDes").value,d2=$("lHas").value;
+  return S.log.filter(function(l){
+    if(i&&String(l.ins).toLowerCase().indexOf(i)<0)return false;
+    if(u&&String(l.u).toLowerCase().indexOf(u)<0)return false;
+    if(d1||d2){if(!l.d)return false;var d=l.d.slice(0,10);if(d1&&d<d1)return false;if(d2&&d>d2)return false}
+    return true})}
+function visible(){
+  var m=$("fMer").value,o=$("fOri").value,e=$("fEj").value;
+  return S.rows.filter(function(r){return(!r.cor||r.cor===user())&&(!m||r.mer===m)&&(!o||r.ori===o)&&(!e||r.ej==e)})}
+function render(){
+  var v=visible(),pages=Math.max(1,Math.ceil(v.length/PAGE));if(page>=pages)page=pages-1;var vp=v.slice(page*PAGE,page*PAGE+PAGE);
+  $("rows").innerHTML=vp.map(function(r){var s=sum(r.f);
+    return '<tr data-id="'+r.id+'"'+(r.id===sel?' class="sel"':'')+'><td>'+esc(r.ej)+'</td><td>'+esc(r.mer)+'</td><td>'+esc(r.ins)+'</td><td>'+esc(r.fec)+'</td><td>'+esc(r.des)+'</td><td>'+esc(r.seq)+'</td><td>'+(r.isf?"Sí":"No")+'</td><td><span class="tag">'+esc(r.ori)+'</span></td><td class="'+(s>1?'bad':'ok')+'">'+s.toFixed(8)+'</td></tr>'}).join("")||'<tr><td colspan="9" class="note">No hay calificaciones con esos filtros. Cambia los filtros o usa Ingresar.</td></tr>';
+  $("count").textContent=v.length+" calificaciones (mostrando "+(vp.length?page*PAGE+1:0)+"–"+(page*PAGE+vp.length)+")"+(saveOk?"":" · Aviso: el navegador no pudo guardar todos los datos; al recargar se perderán los cambios recientes.");
+  $("pager").innerHTML=pages>1?'<button class="b" id="pFirst"'+(page===0?' disabled':'')+'>Primera</button><button class="b" id="pPrev"'+(page===0?' disabled':'')+'>Anterior</button><span class="note" style="margin:0 8px">Página '+(page+1)+' de '+pages+'</span><button class="b" id="pNext"'+(page>=pages-1?' disabled':'')+'>Siguiente</button><button class="b" id="pLast"'+(page>=pages-1?' disabled':'')+'>Última</button><label style="flex-direction:row;align-items:center;gap:6px;margin-left:12px">Ir a la página<input id="pGo" type="number" min="1" max="'+pages+'" value="'+(page+1)+'" style="width:80px"></label><button class="b" id="pIr">Ir</button>':"";
+  var hasSel=!!sel&&v.some(function(r){return r.id===sel});
+  $("bIng").disabled=!can("edit");$("bMod").disabled=!can("edit")||!hasSel;$("bEli").disabled=!can("del")||!hasSel;$("bCar").disabled=!can("load");$("t2").disabled=!can("log");
+  if(!can("log")&&!$("v2").hidden)tab(1);
+  $("roleNote").textContent=ROLENOTE[role()]+" (Simulación: en producción el rol proviene del inicio de sesión y se verifica en el servidor.)";
+  var lg=logFiltered();$("logCount").textContent=lg.length+" registros"+(lg.length>200?" (se muestran los 200 más recientes)":"");
+  $("logRows").innerHTML=lg.slice(0,200).map(function(l){return '<tr><td>'+esc(l.t)+'</td><td>'+esc(l.u)+'</td><td>'+esc(l.op)+'</td><td>'+esc(l.ins)+'</td><td>'+esc(l.a)+'</td><td>'+esc(l.n)+'</td></tr>'}).join("")||'<tr><td colspan="6" class="note">No hay registros que coincidan con los filtros.</td></tr>'}
+$("rows").onclick=function(e){var t=e.target.closest("tr");if(t&&t.dataset.id){sel=+t.dataset.id;render()}};
+$("bBus").onclick=function(){page=0;render()};
+function goPage(){var n=parseInt($("pGo").value,10);if(isNaN(n))return;page=Math.min(Math.max(n,1),Math.max(1,Math.ceil(visible().length/PAGE)))-1;render()}
+$("pager").onclick=function(e){var t=e.target.id;if(t==="pPrev")page--;else if(t==="pNext")page++;else if(t==="pFirst")page=0;else if(t==="pLast")page=Math.ceil(visible().length/PAGE)-1;else if(t==="pIr"){goPage();return}else return;render()};
+$("pager").onkeydown=function(e){if(e.target.id==="pGo"&&e.key==="Enter")goPage()};
+$("bLim").onclick=function(){$("fMer").value=$("fOri").value=$("fEj").value="";page=0;render()};
+$("user").onchange=function(){sel=null;render()};
+function tab(n){$("v1").hidden=n!==1;$("v2").hidden=n!==2;$("t1").setAttribute("aria-selected",n===1);$("t2").setAttribute("aria-selected",n===2)}
+$("t1").onclick=function(){tab(1)};$("t2").onclick=function(){if(can("log"))tab(2)};
+$("lBus").onclick=render;
+$("lLim").onclick=function(){$("lIns").value=$("lUsu").value=$("lDes").value=$("lHas").value="";render()};
+$("role").onchange=function(){sel=null;render()};
+
+/* editor */
+var editId=null;
+function buildGrids(m,f){
+  $("gM").innerHTML=$("gF").innerHTML="";
+  for(var i=0;i<N;i++){
+    $("gM").insertAdjacentHTML("beforeend",'<label>M'+(i+8)+'<input type="number" min="0" data-m="'+i+'" value="'+(m?m[i]:0)+'"></label>');
+    $("gF").insertAdjacentHTML("beforeend",'<label>F'+(i+8)+'<input type="number" step="0.00000001" min="0" data-f="'+i+'" value="'+(f?f[i]:0)+'"></label>')}}
+function readF(){return Array.prototype.map.call($("gF").querySelectorAll("input"),function(x){return +x.value||0})}
+function readM(){return Array.prototype.map.call($("gM").querySelectorAll("input"),function(x){return +x.value||0})}
+function msg(t,c){$("eMsg").textContent=t;$("eMsg").className="msg "+(c||"")}
+function openEd(r){if(!can("edit"))return;
+  editId=r?r.id:null;
+  $("edT").textContent=r?"Modificar calificación":"Ingresar calificación";
+  $("eMer").value=r?r.mer:($("fMer").value||"Chile");
+  $("eEj").value=r?r.ej:($("fEj").value||new Date().getFullYear()-1);
+  $("eIns").value=r?r.ins:"";$("eSeq").value=r?r.seq:"";$("eFec").value=r?r.fec:"";
+  $("eDiv").value=r?r.div:0;$("eDes").value=r?r.des:"";$("eIsf").checked=r?r.isf:false;
+  buildGrids(r?r.m||zeros():null,r?r.f:null);msg("");$("dEd").showModal()}
+$("bIng").onclick=function(){openEd(null)};
+$("bMod").onclick=function(){openEd(S.rows.find(function(r){return r.id===sel}))};
+$("bCan").onclick=function(){$("dEd").close()};
+$("bCal").onclick=function(){
+  var d=+$("eDiv").value,m=readM();
+  if(!(d>0)){msg("Ingresa un dividendo mayor a 0 para calcular los factores.","bad");return}
+  var f=m.map(function(x){return r8(x/d)});
+  $("gF").querySelectorAll("input").forEach(function(x,i){x.value=f[i]});
+  var s=sum(f);msg(s>1?"La suma de los factores 8 a 16 es "+s.toFixed(8)+" y supera 1. Corrige los montos.":"Factores calculados. Suma F8–16: "+s.toFixed(8)+".",s>1?"bad":"ok")};
+$("bGra").onclick=function(){if(!can("edit"))return;
+  var f=readF(),s=sum(f);
+  if(!$("eIns").value.trim()){msg("Falta el instrumento.","bad");return}
+  if(!/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,29}$/.test($("eIns").value.trim())){msg("El instrumento solo admite letras, números, espacio, punto, guion y guion bajo (máximo 30).","bad");return}
+  if(/^[=+\-@\t\r]/.test($("eDes").value.trim())){msg("La descripción no puede comenzar con = + - o @.","bad");return}
+  if(!(+$("eSeq").value>10000)){msg("La secuencia de evento debe ser mayor a 10000.","bad");return}
+  if(!$("eFec").value){msg("Selecciona la fecha de pago.","bad");return}
+  if(s>1){msg("No se puede grabar: la suma de los factores 8 a 16 es "+s.toFixed(8)+" y supera 1.","bad");return}
+  var data={mer:$("eMer").value,ej:+$("eEj").value,ins:$("eIns").value.trim(),fec:$("eFec").value,des:$("eDes").value,seq:+$("eSeq").value,isf:$("eIsf").checked,div:+$("eDiv").value,m:readM(),f:f};
+  if(editId){
+    var r=S.rows.find(function(x){return x.id===editId}),ant="F8–16 = "+sum(r.f).toFixed(8);
+    Object.assign(r,data);addLog("Modificación",r.ins,ant,"F8–16 = "+s.toFixed(8))
+  }else{
+    var n=Object.assign({id:S.next++,ori:"manual",cor:user()},data);S.rows.push(n);sel=n.id;
+    addLog("Creación",n.ins,"—","F8–16 = "+s.toFixed(8)+", origen manual")}
+  save();$("dEd").close();render()};
+$("bEli").onclick=function(){if(!can("del"))return;
+  var r=S.rows.find(function(x){return x.id===sel});if(!r)return;
+  if(!confirm("¿Eliminar la calificación "+r.ins+" (secuencia "+r.seq+")?"))return;
+  S.rows=S.rows.filter(function(x){return x.id!==sel});
+  addLog("Eliminación",r.ins,"F8–16 = "+sum(r.f).toFixed(8),"—");sel=null;render()};
+
+/* carga masiva */
+var parsed=[];
+function sample(){
+  var a=["2025;Chile;CFIBPRIV-E;2025-04-28;Dividendo definitivo;10451;"+[.55,.3,.1,.05].concat(Array(26).fill(0)).join(";"),
+   "2025;Chile;NUEVO-X;2025-07-15;Dividendo;10700;"+[.6,.4].concat(Array(28).fill(0)).join(";"),
+   "2025;Perú;ERR-Y;2025-08-01;Suma excedida;10701;"+[.8,.5].concat(Array(28).fill(0)).join(";"),
+   "2025;Chile;CORTO;2025-08-02;Faltan columnas;10702;0.5;0.5"];
+  return a.join("\n")}
+$("bCar").onclick=function(){if(!can("load"))return;fileTxt=null;$("cTxt").value="";$("cRows").innerHTML="";$("cMsg").textContent="";$("bOk").disabled=true;parsed=[];$("dCar").showModal()};
+$("bCc").onclick=function(){$("dCar").close()};
+$("bEj").onclick=function(){fileTxt=null;$("cTxt").value=sample()};
+var fileTxt=null;
+$("cTxt").oninput=function(){fileTxt=null};
+$("cFile").onchange=function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){fileTxt=rd.result;var ls=rd.result.split(/\r?\n/).filter(function(l){return l.trim()});$("cTxt").value=ls.slice(0,20).join("\n")+(ls.length>20?"\n... archivo cargado con "+ls.length+" filas; se muestran las primeras 20":"")};rd.readAsText(f)};
+$("bPre").onclick=function(){
+  var lines=(fileTxt!==null?fileTxt:$("cTxt").value).split(/\r?\n/).filter(function(l){return l.trim()}),seen={};parsed=[];
+  var idx={};S.rows.forEach(function(r){idx[[r.mer,r.ej,r.ins,r.seq].join("|")]=r});
+  var shown=0,html=lines.map(function(l,i){
+    var c=l.split(";"),res,ok=false,s=0;
+    if(c.length!==36)res="Rechazada: tiene "+c.length+" columnas y se esperan 36";
+    else{var f=c.slice(6).map(function(x){return +x.replace(",",".")||0});s=sum(f);
+      var key=[c[1],c[0],c[2],c[5]].join("|");
+      if(MERC.indexOf(c[1])<0)res="Rechazada: mercado no válido (Chile, Colombia o Perú)";else if(!/^\d{4}$/.test(c[0]))res="Rechazada: el ejercicio debe tener 4 dígitos";else if(!okFecha(c[3]))res="Rechazada: fecha no válida (use AAAA-MM-DD)";else if(!/^[A-Za-z0-9][A-Za-z0-9 ._-]{0,29}$/.test(c[2]))res="Rechazada: instrumento con caracteres no permitidos";else if(/^[=+\-@\t\r]/.test(c[4].trim()))res="Rechazada: la descripción comienza con un carácter de fórmula";else if(!(+c[5]>10000))res="Rechazada: secuencia debe ser mayor a 10000";
+      else if(s>1)res="Rechazada: suma F8–16 supera 1";
+      else if(seen[key])res="Rechazada: llave repetida dentro del archivo";
+      else{seen[key]=1;ok=true;var ex=idx[key];
+        res=ex?"Actualiza registro existente":"Nueva calificación";
+        parsed.push({c:c,f:f,ex:ex,key:key})}}
+    if(i>=50&&(ok||shown>=50))return "";if(!ok)shown++;return '<tr><td>'+(i+1)+'</td><td>'+esc(c[2]||"")+'</td><td>'+esc(c[5]||"")+'</td><td>'+(c.length===36?s.toFixed(8):"—")+'</td><td class="'+(ok?'ok':'bad')+'">'+res+'</td></tr>'}).join("");
+  $("cRows").innerHTML=html||'<tr><td colspan="5" class="note">Pega o sube un CSV para previsualizar.</td></tr>';
+  $("cMsg").textContent=parsed.length+" de "+lines.length+" filas válidas. Las filas rechazadas no se cargan. Se muestran las primeras 50 filas y hasta 50 rechazadas.";
+  $("bOk").disabled=!parsed.length};
+$("bOk").onclick=function(){if(!can("load"))return;
+  var nAct=0,nNew=0;parsed.forEach(function(p){var c=p.c;
+    if(p.ex){var a="F8–16 = "+sum(p.ex.f).toFixed(8);p.ex.f=p.f;p.ex.ori="archivo";p.ex.des=c[4];p.ex.fec=c[3];nAct++}
+    else{S.rows.push({id:S.next++,mer:c[1],ej:+c[0],ins:c[2],fec:c[3],des:c[4],seq:+c[5],isf:false,ori:"archivo",cor:user(),div:0,f:p.f});nNew++}});
+  addLog("Carga masiva","("+parsed.length+" filas)","—",nNew+" nuevas, "+nAct+" actualizadas");save();$("dCar").close();page=0;render()};
+render();
+})();
+</script>
+</body>
+</html>
