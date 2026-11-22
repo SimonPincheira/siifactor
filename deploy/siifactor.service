@@ -1,0 +1,18 @@
+[Unit]
+Description=SIIFactor API (gunicorn)
+After=network.target postgresql.service
+
+[Service]
+User=siifactor
+Group=siifactor
+WorkingDirectory=/opt/siifactor/backend
+EnvironmentFile=/etc/siifactor.env
+ExecStart=/opt/siifactor-venv/bin/gunicorn --workers 2 --bind 127.0.0.1:8000 app:app
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
