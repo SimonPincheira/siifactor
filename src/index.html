@@ -48,15 +48,20 @@ h3{margin:16px 0 8px;font-size:14px}
 .note{color:var(--mute);font-size:13px;margin:6px 0 0}
 textarea{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:12px}
 @media (prefers-reduced-motion:no-preference){dialog[open]{animation:in .15s ease-out}@keyframes in{from{opacity:0;transform:translateY(6px)}}}
+.userbar{display:flex;gap:10px;align-items:center;font-size:14px;flex-wrap:wrap}
+.userbar span{color:var(--mute)}
+dialog.login{width:min(420px,94vw)}
+dialog.login input{width:100%}
 </style>
 </head>
 <body>
 <header>
   <h1>Calificaciones Tributarias<small>SIIFactor · prototipo para nuam</small></h1>
-  <label>Rol<select id="role"><option value="Administrador">Administrador</option><option value="Analista">Analista</option><option value="Supervisor">Supervisor</option></select></label>
+  <div id="userbar" class="userbar" hidden><span id="whoami"></span><button class="b" id="bOut">Cerrar sesión</button></div>
+  <div hidden><label>Rol<select id="role"><option value="Administrador">Administrador</option><option value="Analista">Analista</option><option value="Supervisor">Supervisor</option></select></label>
   <label>Corredora
     <select id="user"><option value="Corredora A">Corredora A</option><option value="Corredora B">Corredora B</option></select>
-  </label>
+  </label></div>
 </header>
 <main>
   <nav role="tablist">
@@ -103,8 +108,22 @@ textarea{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:12
       <tbody id="logRows"></tbody>
     </table></div>
     <p class="note">El log es de solo lectura: no hay acciones para editar o borrar registros. Se muestran los 200 registros más recientes.</p>
+    <h3>Log del servidor (PostgreSQL)</h3>
+    <p class="note">Estos registros vienen de la base de datos: inicios y cierres de sesión, intentos fallidos y accesos denegados de tu corredora.</p>
+    <button class="b" id="bSrv">Cargar desde el servidor</button>
+    <p class="msg" id="srvMsg" role="status"></p>
+    <div class="scroll"><table><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Operación</th><th>Detalle</th></tr></thead><tbody id="srvRows"></tbody></table></div>
   </section>
 </main>
+
+<dialog id="dLogin" class="login" aria-labelledby="lgT">
+  <h2 id="lgT" style="margin:0 0 6px;font-size:17px">Iniciar sesión</h2>
+  <p class="note" style="margin:0 0 6px">Ingresa con tu usuario de SIIFactor.</p>
+  <label style="margin-top:10px">Correo<input id="lgCorreo" type="email" autocomplete="username" maxlength="254"></label>
+  <label style="margin-top:10px">Contraseña<input id="lgClave" type="password" autocomplete="current-password" maxlength="200"></label>
+  <p class="msg bad" id="lgMsg" role="alert"></p>
+  <div class="bar"><button class="b p" id="bLg">Ingresar</button></div>
+</dialog>
 
 <dialog id="dEd">
   <h2 id="edT" style="margin:0 0 10px;font-size:17px">Ingresar calificación</h2>
@@ -293,6 +312,57 @@ $("bOk").onclick=function(){if(!can("load"))return;
     if(p.ex){var a="F8–16 = "+sum(p.ex.f).toFixed(8);p.ex.f=p.f;p.ex.ori="archivo";p.ex.des=c[4];p.ex.fec=c[3];nAct++}
     else{S.rows.push({id:S.next++,mer:c[1],ej:+c[0],ins:c[2],fec:c[3],des:c[4],seq:+c[5],isf:false,ori:"archivo",cor:user(),div:0,f:p.f});nNew++}});
   addLog("Carga masiva","("+parsed.length+" filas)","—",nNew+" nuevas, "+nAct+" actualizadas");save();$("dCar").close();page=0;render()};
+
+/* ---- sesión con el servidor ---- */
+var CSRF="",lastPing=Date.now(),logged=false;
+var ROLES={administrador:"Administrador",analista:"Analista",supervisor:"Supervisor"};
+function api(path,opt){opt=opt||{};opt.credentials="same-origin";opt.headers=Object.assign({"Content-Type":"application/json"},opt.headers||{});if(opt.method&&opt.method!=="GET")opt.headers["X-CSRF-Token"]=CSRF;return fetch(path,opt)}
+function needLogin(msg){
+  logged=false;CSRF="";$("userbar").hidden=true;$("lgClave").value="";
+  if(location.protocol==="http:"&&location.hostname!=="localhost")msg="Abre esta página por https:// para poder iniciar sesión.";
+  $("lgMsg").textContent=msg||"";
+  if(!$("dLogin").open)$("dLogin").showModal();
+  $("lgCorreo").focus()}
+function setSession(u){
+  logged=true;CSRF=u.csrf;
+  $("role").value=ROLES[u.rol];
+  var o=document.createElement("option");o.value=o.textContent=u.corredora||"";$("user").replaceChildren(o);$("user").value=o.value;
+  $("whoami").textContent=u.nombre+" · "+ROLES[u.rol]+" · "+(u.corredora||"sin corredora");
+  $("userbar").hidden=false;
+  if($("dLogin").open)$("dLogin").close();
+  sel=null;render()}
+function doLogin(){
+  var c=$("lgCorreo").value.trim(),p=$("lgClave").value;
+  if(!c||!p){$("lgMsg").textContent="Ingresa tu correo y tu contraseña.";return}
+  $("bLg").disabled=true;
+  api("/api/login",{method:"POST",body:JSON.stringify({correo:c,clave:p})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d}})})
+    .then(function(x){
+      $("bLg").disabled=false;$("lgClave").value="";
+      if(x.ok&&ROLES[x.d.rol])setSession(x.d);
+      else $("lgMsg").textContent=(x.d&&x.d.error)||"No fue posible iniciar sesión."})
+    .catch(function(){$("bLg").disabled=false;$("lgMsg").textContent="No se pudo conectar con el servidor. Abre la página por https://."})}
+$("bLg").onclick=doLogin;
+$("lgClave").onkeydown=$("lgCorreo").onkeydown=function(e){if(e.key==="Enter")doLogin()};
+$("dLogin").addEventListener("cancel",function(e){e.preventDefault()});
+$("bOut").onclick=function(){api("/api/logout",{method:"POST"}).catch(function(){}).then(function(){needLogin("Sesión cerrada.")})};
+function ping(){
+  if(!logged||Date.now()-lastPing<300000)return;
+  lastPing=Date.now();
+  api("/api/me").then(function(r){if(r.status===401)needLogin("Tu sesión expiró por inactividad. Ingresa de nuevo.")}).catch(function(){})}
+document.addEventListener("click",ping,true);document.addEventListener("keydown",ping,true);
+$("bSrv").onclick=function(){
+  $("srvMsg").textContent="Consultando…";$("srvRows").innerHTML="";
+  api("/api/auditoria").then(function(r){
+    if(r.status===401){needLogin("Tu sesión expiró. Ingresa de nuevo.");return null}
+    if(r.status===403){$("srvMsg").textContent="El servidor denegó el acceso: tu rol no puede consultar la auditoría.";return null}
+    if(!r.ok){$("srvMsg").textContent="No se pudo obtener el log del servidor.";return null}
+    return r.json()}).then(function(d){
+    if(!d)return;
+    $("srvMsg").textContent=d.registros.length+" registros del servidor";
+    $("srvRows").innerHTML=d.registros.map(function(l){return '<tr><td>'+esc(l.fecha_hora)+'</td><td>'+esc(l.usuario)+'</td><td>'+esc(l.operacion)+'</td><td>'+esc(JSON.stringify(l.valor_nuevo||""))+'</td></tr>'}).join("")||'<tr><td colspan="4" class="note">Sin registros.</td></tr>'})
+  .catch(function(){$("srvMsg").textContent="No se pudo conectar con el servidor."})};
+api("/api/me").then(function(r){return r.ok?r.json():Promise.reject()}).then(function(u){if(ROLES[u.rol])setSession(u);else needLogin("Rol no reconocido.")}).catch(function(){needLogin("")});
 render();
 })();
 </script>
